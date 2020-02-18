@@ -84,6 +84,11 @@ func ParseAddr(conn net.Conn, password []byte) (_ net.Conn, domain string, port 
 	if head.Checksum != checksum(password, head.Port, head.DomainLength) {
 		return teeConn, "", 0, nil
 	}
+	defer func() {
+		if uint8(len(domain)) != head.DomainLength {
+			domain, port = "", 0
+		}
+	}()
 
 	switch head.Type {
 	case TGT_OTHER:

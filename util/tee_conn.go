@@ -16,7 +16,8 @@ func (t *TeeConn) StartOrReset() {
 	t.tee = true
 }
 func (t *TeeConn) DropAndRestart() {
-	t.buf = []byte{}
+	t.buf = t.buf[:0]
+	t.offset = 0
 	t.tee = true
 }
 func (t *TeeConn) Stop() {
