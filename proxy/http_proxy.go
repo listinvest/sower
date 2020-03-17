@@ -6,12 +6,10 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/wweir/sower/conf"
-	_http "github.com/wweir/sower/internal/http"
-	"github.com/wweir/sower/util"
+	"github.com/wweir/sower/router"
+	"github.com/wweir/sower/transport"
 	"github.com/wweir/utils/log"
 )
 
@@ -34,12 +32,12 @@ func startHTTPProxy(httpProxyAddr, serverAddr string, password []byte) {
 }
 
 func httpProxy(w http.ResponseWriter, r *http.Request, serverAddr string, password []byte) {
-	host, port := util.ParseHostPort(r.Host, 80)
+	target, host := addDefaultPort(r.Host, "80")
 
 	roundTripper := &http.Transport{}
-	if conf.ShouldProxy(host) {
+	if router.ShouldProxy(host) {
 		roundTripper.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-			return dial(serverAddr, password, _http.TGT_HTTP, host, port)
+			return transport.Dial(serverAddr, target, password)
 		}
 	}
 
@@ -60,7 +58,7 @@ func httpProxy(w http.ResponseWriter, r *http.Request, serverAddr string, passwo
 }
 
 func httpsProxy(w http.ResponseWriter, r *http.Request, serverAddr string, password []byte) {
-	host, port := util.ParseHostPort(r.Host, 443)
+	target, host := addDefaultPort(r.Host, "443")
 
 	conn, _, err := w.(http.Hijacker).Hijack()
 	if err != nil {
@@ -76,10 +74,10 @@ func httpsProxy(w http.ResponseWriter, r *http.Request, serverAddr string, passw
 	}
 
 	var rc net.Conn
-	if conf.ShouldProxy(host) {
-		rc, err = dial(serverAddr, password, _http.TGT_HTTPS, host, port)
+	if router.ShouldProxy(host) {
+		rc, err = transport.Dial(serverAddr, target, password)
 	} else {
-		rc, err = net.Dial("tcp", net.JoinHostPort(host, strconv.Itoa(int(port))))
+		rc, err = net.Dial("tcp", target)
 	}
 	if err != nil {
 		conn.Write([]byte("sower dial " + serverAddr + " fail: " + err.Error()))

@@ -1,4 +1,4 @@
-package util
+package transport
 
 import (
 	"net"
@@ -8,20 +8,19 @@ type TeeConn struct {
 	net.Conn
 	buf    []byte
 	offset int
-	tee    bool // read
+	stop   bool // read
 }
 
-func (t *TeeConn) StartOrReset() {
+func (t *TeeConn) Reread() {
 	t.offset = 0
-	t.tee = true
 }
-func (t *TeeConn) DropAndRestart() {
+func (t *TeeConn) Reset() {
 	t.buf = []byte{}
-	t.tee = true
+	t.offset = 0
 }
 func (t *TeeConn) Stop() {
 	t.offset = 0
-	t.tee = false
+	t.stop = true
 }
 
 func (t *TeeConn) Read(b []byte) (n int, err error) {
@@ -33,7 +32,7 @@ func (t *TeeConn) Read(b []byte) (n int, err error) {
 	}
 
 	n, err = t.Conn.Read(b)
-	if t.tee {
+	if !t.stop {
 		t.buf = append(t.buf, b[:n]...)
 		t.offset += n
 	}
